@@ -28,7 +28,7 @@ if S3_PROXY_URL and S3_PROXY_PORT:
     protocol = "https" if 'https' in S3_PROXY_URL else "http"
 
     proxies = {
-        protocol: S3_PROXY_URL + ':' + S3_PROXY_PORT
+        protocol: "%s://%s:%s" % (protocol, S3_PROXY_URL, S3_PROXY_PORT)
     }
 else:
     proxies = None
