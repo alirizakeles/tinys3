@@ -21,6 +21,18 @@ from .util import LenWrapperStream
 # http://grokbase.com/t/python/python-list/129tb1ygws/mimetypes-guess-type-broken-in-windows-on-py2-7-and-python-3-x
 mimetypes.init([])
 
+S3_PROXY_URL = os.environ.get('S3_PROXY_URL', '')
+S3_PROXY_PORT = os.environ.get('S3_PROXY_PORT', '')
+
+if S3_PROXY_URL and S3_PROXY_PORT:
+    protocol = "https" if 'https' in S3_PROXY_URL else "http"
+
+    proxies = {
+        protocol: S3_PROXY_URL + ':' + S3_PROXY_PORT
+    }
+else:
+    proxies = None
+
 
 class S3Request(object):
     def __init__(self, conn):
@@ -52,7 +64,7 @@ class GetRequest(S3Request):
 
     def run(self):
         url = self.bucket_url(self.key, self.bucket)
-        r = self.adapter().get(url, auth=self.auth)
+        r = self.adapter().get(url, auth=self.auth, proxies=proxies)
 
         r.raise_for_status()
 
@@ -83,7 +95,7 @@ class ListRequest(S3Request):
             resp = self.adapter().get(url, auth=self.auth, params={
                 'prefix': self.prefix,
                 'marker': marker,
-            })
+            }, proxies=proxies)
             resp.raise_for_status()
 
             root = ET.fromstring(resp.content)
@@ -175,7 +187,7 @@ class UploadRequest(S3Request):
             r = self.adapter().put(self.bucket_url(self.key, self.bucket),
                                    data=data,
                                    headers=headers,
-                                   auth=self.auth)
+                                   auth=self.auth, proxies=proxies)
 
             r.raise_for_status()
 
@@ -214,7 +226,7 @@ class DeleteRequest(S3Request):
 
     def run(self):
         url = self.bucket_url(self.key, self.bucket)
-        r = self.adapter().delete(url, auth=self.auth)
+        r = self.adapter().delete(url, auth=self.auth, proxies=proxies)
 
         r.raise_for_status()
 
@@ -244,7 +256,8 @@ class CopyRequest(S3Request):
         if self.metadata:
             headers.update(self.metadata)
 
-        r = self.adapter().put(self.bucket_url(self.to_key, self.to_bucket), auth=self.auth, headers=headers)
+        r = self.adapter().put(self.bucket_url(self.to_key, self.to_bucket), auth=self.auth, headers=headers,
+                               proxies=proxies)
         r.raise_for_status()
 
         return r
